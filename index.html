@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pump Content Studio</title>
+  <link rel="stylesheet" href="css/variables.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/charts.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+</head>
+<body>
+  <div class="app-shell">
+    <!-- Sidebar -->
+    <aside class="sidebar expanded" id="sidebar">
+      <div class="sidebar-logo" onclick="window.PCS.toggleSidebar()">
+        <div class="logo-icon">P</div>
+        <span class="logo-text">PUMP CS</span>
+      </div>
+      <nav class="sidebar-nav">
+        <div class="nav-item active" data-page="dashboard" onclick="window.PCS.navigate('dashboard')">
+          <span class="nav-icon">&#x1F4CA;</span>
+          <span class="nav-label">Dashboard</span>
+        </div>
+        <div class="nav-item" data-page="reels" onclick="window.PCS.navigate('reels')">
+          <span class="nav-icon">&#x1F3AC;</span>
+          <span class="nav-label">Reels</span>
+        </div>
+        <div class="nav-item" data-page="ideas" onclick="window.PCS.navigate('ideas')">
+          <span class="nav-icon">&#x1F4A1;</span>
+          <span class="nav-label">Ideas & Guiones</span>
+        </div>
+        <div class="nav-item" data-page="upload" onclick="window.PCS.navigate('upload')">
+          <span class="nav-icon">&#x2795;</span>
+          <span class="nav-label">Cargar / Importar</span>
+        </div>
+        <div class="nav-item" data-page="competitors" onclick="window.PCS.navigate('competitors')">
+          <span class="nav-icon">&#x1F575;&#xFE0F;</span>
+          <span class="nav-label">Competencia</span>
+        </div>
+        <div class="nav-item" data-page="config" onclick="window.PCS.navigate('config')">
+          <span class="nav-icon">&#x2699;&#xFE0F;</span>
+          <span class="nav-label">Configuracion</span>
+        </div>
+      </nav>
+    </aside>
+
+    <!-- Main -->
+    <div class="main-area">
+      <!-- Header -->
+      <header class="app-header">
+        <div class="header-breadcrumb">
+          <span class="text-muted">Pump CS</span>
+          <span class="text-muted">/</span>
+          <span class="current" id="header-page-name">Dashboard</span>
+        </div>
+        <div class="header-kpis" id="header-kpis">
+          <!-- Filled by JS -->
+        </div>
+        <div class="header-actions">
+          <button class="btn btn-sm" onclick="window.PCS.openAI()" title="Abrir Pump AI">&#x1F916; AI</button>
+          <button class="btn btn-sm btn-fire" onclick="window.PCS.syncReels()" title="Sincronizar reels">&#x1F504; Sync</button>
+        </div>
+      </header>
+
+      <!-- Content -->
+      <main class="content-area" id="content">
+        <div class="loading-overlay">
+          <div class="loader"></div>
+          <span>Cargando Pump Content Studio...</span>
+        </div>
+      </main>
+    </div>
+
+    <!-- AI Chat Panel -->
+    <aside class="ai-panel" id="ai-panel">
+      <div class="ai-panel-header">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <h3>&#x1F916; PUMP AI</h3>
+          <button class="btn btn-sm btn-ghost" onclick="window.PCS.closeAI()">&times;</button>
+        </div>
+        <div class="ai-panel-context" id="ai-context">Estratega de Contenido</div>
+      </div>
+      <div class="ai-panel-pills" id="ai-pills">
+        <!-- Filled by JS -->
+      </div>
+      <div class="ai-panel-messages" id="ai-messages">
+        <!-- Chat messages -->
+      </div>
+      <div class="ai-panel-input">
+        <textarea id="ai-input" placeholder="Preguntale a Pump AI..." rows="1"
+          onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();window.PCS.sendAI()}"></textarea>
+        <button class="btn btn-fire btn-sm" onclick="window.PCS.sendAI()">&#x27A4;</button>
+      </div>
+    </aside>
+  </div>
+
+  <!-- Toast container -->
+  <div class="toast-container" id="toasts"></div>
+
+  <!-- Modal overlay -->
+  <div class="modal-overlay" id="modal-overlay" onclick="if(event.target===this)window.PCS.closeModal()">
+    <div class="modal" id="modal-content"></div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="js/utils.js"></script>
+  <script src="js/supabase.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/scraper.js"></script>
+  <script src="js/charts.js"></script>
+  <script src="js/modules/dashboard.js"></script>
+  <script src="js/modules/reels-grid.js"></script>
+  <script src="js/modules/reel-detail.js"></script>
+  <script src="js/modules/ideas-kanban.js"></script>
+  <script src="js/modules/upload.js"></script>
+  <script src="js/modules/ai-chat.js"></script>
+  <script src="js/modules/competitors.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

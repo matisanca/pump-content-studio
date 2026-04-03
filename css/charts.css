@@ -1,0 +1,116 @@
+/* ============================================
+   PUMP CONTENT STUDIO — Chart Styles
+   ============================================ */
+
+.chart-container {
+  position: relative;
+  width: 100%;
+}
+
+.chart-container canvas {
+  width: 100% !important;
+}
+
+/* Scatter plot quadrants */
+.scatter-wrap {
+  position: relative;
+}
+.scatter-quadrants {
+  position: absolute;
+  inset: 40px 20px 40px 60px;
+  pointer-events: none;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+}
+.scatter-quadrant {
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-start;
+  padding: 8px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  opacity: 0.3;
+}
+.scatter-quadrant:nth-child(1) { color: var(--cyan); }
+.scatter-quadrant:nth-child(2) { color: var(--green); justify-content: flex-end; }
+.scatter-quadrant:nth-child(3) { color: var(--text-muted); align-items: flex-end; }
+.scatter-quadrant:nth-child(4) { color: var(--yellow); align-items: flex-end; justify-content: flex-end; }
+
+/* Heatmap */
+.heatmap-grid {
+  display: grid;
+  grid-template-columns: 50px repeat(7, 1fr);
+  gap: 3px;
+}
+.heatmap-cell {
+  aspect-ratio: 1;
+  border-radius: 3px;
+  background: var(--border);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  position: relative;
+  min-height: 20px;
+}
+.heatmap-cell:hover {
+  transform: scale(1.2);
+  z-index: 2;
+}
+.heatmap-cell.intensity-1 { background: rgba(255, 107, 53, 0.15); }
+.heatmap-cell.intensity-2 { background: rgba(255, 107, 53, 0.3); }
+.heatmap-cell.intensity-3 { background: rgba(255, 107, 53, 0.5); }
+.heatmap-cell.intensity-4 { background: rgba(255, 107, 53, 0.7); }
+.heatmap-cell.intensity-5 { background: var(--fire); }
+
+.heatmap-label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  color: var(--text-muted);
+  font-family: var(--font-display);
+}
+
+/* Dashboard grid */
+.dashboard-grid {
+  display: grid;
+  gap: 20px;
+}
+.dashboard-kpis {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+.dashboard-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+.dashboard-row.full {
+  grid-template-columns: 1fr;
+}
+.dashboard-pilares {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 12px;
+}
+
+@media (max-width: 1200px) {
+  .dashboard-kpis {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .dashboard-row {
+    grid-template-columns: 1fr;
+  }
+  .dashboard-pilares {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* Sparkline mini chart container */
+.sparkline-wrap {
+  height: 40px;
+  width: 100%;
+}

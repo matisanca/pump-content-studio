@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Pump CS — Setup</title>
+  <style>
+    body { background:#060608; color:#f0f0f8; font-family:'DM Sans',sans-serif; margin:0; padding:40px; }
+    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@700&family=DM+Sans:wght@400;600&display=swap');
+    h1 { color:#ff6b35; font-size:24px; margin-bottom:8px; }
+    h2 { color:#7070a0; font-size:14px; font-weight:400; margin-bottom:32px; }
+    .card { background:#13131a; border:1px solid #1f1f2e; border-radius:10px; padding:24px; margin-bottom:20px; max-width:700px; }
+    .card h3 { font-size:12px; text-transform:uppercase; letter-spacing:.06em; color:#7070a0; margin:0 0 16px; }
+    .btn { display:inline-flex; align-items:center; gap:6px; padding:10px 20px; border-radius:6px; border:none; cursor:pointer; font-size:14px; font-weight:600; transition:all .15s; }
+    .btn-fire { background:#ff6b35; color:#fff; }
+    .btn-fire:hover { background:#ff7e50; }
+    .btn-fire:disabled { background:#3a3a5a; cursor:not-allowed; }
+    .btn-ghost { background:transparent; color:#7070a0; border:1px solid #1f1f2e; }
+    .btn-ghost:hover { color:#f0f0f8; border-color:#2d2d45; }
+    .log { font-family:'JetBrains Mono',monospace; font-size:12px; background:#060608; border:1px solid #1f1f2e; border-radius:6px; padding:12px; max-height:300px; overflow-y:auto; margin-top:12px; }
+    .log .ok { color:#00ff88; }
+    .log .err { color:#ff3366; }
+    .log .info { color:#7070a0; }
+    .progress { width:100%; height:6px; background:#1f1f2e; border-radius:3px; margin-top:12px; overflow:hidden; }
+    .progress-fill { height:100%; background:linear-gradient(135deg,#ff6b35,#ff0099); border-radius:3px; transition:width .3s; }
+    .status { display:flex; align-items:center; gap:8px; font-size:13px; margin-bottom:16px; padding:12px; border-radius:6px; }
+    .status.success { background:rgba(0,255,136,.1); border:1px solid rgba(0,255,136,.2); color:#00ff88; }
+    .status.error { background:rgba(255,51,102,.1); border:1px solid rgba(255,51,102,.2); color:#ff3366; }
+    .status.pending { background:rgba(255,214,0,.1); border:1px solid rgba(255,214,0,.2); color:#ffd600; }
+    input { width:100%; padding:9px 12px; background:#060608; border:1px solid #1f1f2e; border-radius:6px; color:#f0f0f8; font-size:13px; box-sizing:border-box; }
+    input:focus { outline:none; border-color:#ff6b35; }
+  </style>
+</head>
+<body>
+  <h1>Pump Content Studio — Setup</h1>
+  <h2>Configuracion inicial de la base de datos</h2>
+
+  <div class="card">
+    <h3>Supabase Connection</h3>
+    <div id="sb-status" class="status pending">Verificando conexion...</div>
+    <div style="display:flex;gap:8px;margin-bottom:8px">
+      <input id="sb-url" value="https://pqozzhnnfstplqrrpqwi.supabase.co" placeholder="Supabase URL">
+    </div>
+    <div style="display:flex;gap:8px">
+      <input id="sb-key" type="password" placeholder="Service Role Key (para migration)">
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Database Migration</h3>
+    <p style="font-size:13px;color:#7070a0;margin-bottom:16px">
+      Crea las 6 tablas de Pump CS en tu proyecto Supabase. Usa el <strong style="color:#f0f0f8">Service Role Key</strong> (no el anon key).
+    </p>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-fire" id="btn-run" onclick="runMigration()">Correr migration</button>
+      <button class="btn btn-ghost" onclick="checkTables()">Verificar tablas</button>
+    </div>
+    <div class="progress" style="display:none" id="progress-wrap">
+      <div class="progress-fill" id="progress-fill" style="width:0%"></div>
+    </div>
+    <div class="log" id="log" style="display:none"></div>
+  </div>
+
+  <div class="card" id="done-card" style="display:none">
+    <h3>Setup Completado</h3>
+    <div class="status success">Todas las tablas creadas correctamente. Ya podes usar Pump CS.</div>
+    <a href="index.html" class="btn btn-fire" style="margin-top:8px;text-decoration:none">Ir a la app →</a>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script>
+    const DEFAULT_URL = 'https://pqozzhnnfstplqrrpqwi.supabase.co';
+    const DEFAULT_SERVICE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBxb3p6aG5uZnN0cGxxcnJwcXdpIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NDQ2MjU5NCwiZXhwIjoyMDkwMDM4NTk0fQ.qYkS5tCGacbPHpSuigbZ8NDxaEPDcbeQuBp8tIY2oSU';
+
+    document.getElementById('sb-key').value = DEFAULT_SERVICE_KEY;
+
+    function log(msg, type = 'info') {
+      const el = document.getElementById('log');
+      el.style.display = 'block';
+      const div = document.createElement('div');
+      div.className = type;
+      div.textContent = msg;
+      el.appendChild(div);
+      el.scrollTop = el.scrollHeight;
+    }
+
+    function setProgress(pct) {
+      document.getElementById('progress-wrap').style.display = 'block';
+      document.getElementById('progress-fill').style.width = pct + '%';
+    }
+
+    async function checkTables() {
+      const url = document.getElementById('sb-url').value;
+      const key = document.getElementById('sb-key').value;
+      const client = supabase.createClient(url, key);
+      const tables = ['pcs_reels','pcs_account_snapshots','pcs_ideas','pcs_guiones','pcs_ai_analyses','pcs_scraping_log'];
+      const el = document.getElementById('sb-status');
+      let found = 0;
+      for (const t of tables) {
+        const { error } = await client.from(t).select('id').limit(1);
+        if (!error || error.code !== 'PGRST205') {
+          found++;
+          log(`✓ Tabla ${t}: existe`, 'ok');
+        } else {
+          log(`✗ Tabla ${t}: no existe`, 'err');
+        }
+      }
+      if (found === tables.length) {
+        el.className = 'status success';
+        el.textContent = `✓ Todas las tablas existen (${found}/${tables.length})`;
+        document.getElementById('done-card').style.display = 'block';
+      } else {
+        el.className = 'status pending';
+        el.textContent = `${found}/${tables.length} tablas encontradas — corré la migration`;
+      }
+    }
+
+    // SQL statements split into individual CREATE statements
+    const MIGRATION_STEPS = [
+      {
+        name: 'Crear tabla pcs_reels',
+        sql: `CREATE TABLE IF NOT EXISTS pcs_reels (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  ig_url TEXT, ig_media_id TEXT UNIQUE, titulo TEXT, caption TEXT, cta_text TEXT,
+  fecha_publicacion DATE, duracion_segundos INTEGER, thumbnail_url TEXT,
+  tipo TEXT CHECK (tipo IN ('reel','trial_reel','carousel','story')) DEFAULT 'reel',
+  pilares TEXT[], subtema TEXT,
+  formato_narrativo TEXT CHECK (formato_narrativo IN ('problema-solucion','lista','historia','polemica','tutorial','comparacion','antes-despues','dato-sorprendente')),
+  hook_tipo TEXT CHECK (hook_tipo IN ('pregunta','afirmacion-polemica','dato-sorprendente','enemigo','promesa','error-comun','identidad')),
+  tiene_ads BOOLEAN DEFAULT false,
+  likes INTEGER DEFAULT 0, comments INTEGER DEFAULT 0, views_totales INTEGER DEFAULT 0,
+  views_organicas INTEGER, reach_organico INTEGER, reach_total INTEGER,
+  saves INTEGER, shares INTEGER, watch_time_total_minutos NUMERIC,
+  retencion_estimada NUMERIC, abandono_promedio_segundos NUMERIC,
+  views_paid INTEGER, reach_paid INTEGER, impr_paid INTEGER,
+  spend NUMERIC, ctr_pago NUMERIC, cpv NUMERIC, cpm NUMERIC, clicks INTEGER,
+  engagement_rate NUMERIC, save_rate NUMERIC, share_rate NUMERIC,
+  comment_rate NUMERIC, like_rate NUMERIC, watch_time_promedio_segundos NUMERIC,
+  views_reach_ratio NUMERIC, multiplicador NUMERIC,
+  genero_ventas BOOLEAN DEFAULT false,
+  producto_vendido TEXT CHECK (producto_vendido IN ('Pampflix','Asesoria Pump Team','Consulta PAMPFARMA','Otro')),
+  ventas_atribuidas INTEGER DEFAULT 0, revenue_atribuido NUMERIC DEFAULT 0,
+  transcripcion TEXT, palabras_por_minuto NUMERIC, hook_text TEXT, estructura_narrativa TEXT,
+  datos_completos BOOLEAN DEFAULT false,
+  created_at TIMESTAMPTZ DEFAULT NOW(), updated_at TIMESTAMPTZ DEFAULT NOW()
+)`
+      },
+      {
+        name: 'Crear tabla pcs_account_snapshots',
+        sql: `CREATE TABLE IF NOT EXISTS pcs_account_snapshots (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  fecha DATE UNIQUE, followers INTEGER, following INTEGER,
+  alcance_semanal INTEGER, impresiones_semanales INTEGER,
+  visitas_perfil INTEGER, clicks_link INTEGER,
+  nuevos_seguidores INTEGER, seguidores_perdidos INTEGER,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+)`
+      },
+      {
+        name: 'Crear tabla pcs_ideas',
+        sql: `CREATE TABLE IF NOT EXISTS pcs_ideas (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  titulo TEXT NOT NULL, descripcion TEXT, pilar TEXT, subtema TEXT,
+  formato_narrativo TEXT, hook_tipo TEXT, hook_propuesto TEXT, cta_propuesto TEXT,
+  estado TEXT CHECK (estado IN ('idea','en_guion','grabado','editado','publicado','descartado')) DEFAULT 'idea',
+  prioridad INTEGER DEFAULT 0,
+  inspirado_en UUID,
+  notas TEXT, created_at TIMESTAMPTZ DEFAULT NOW()
+)`
+      },
+      {
+        name: 'Crear tabla pcs_guiones',
+        sql: `CREATE TABLE IF NOT EXISTS pcs_guiones (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  idea_id UUID, reel_id UUID, version INTEGER DEFAULT 1,
+  titulo TEXT, hook TEXT, desarrollo TEXT, cta TEXT,
+  guion_completo TEXT, duracion_estimada_segundos INTEGER,
+  ppm_objetivo INTEGER DEFAULT 130,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+)`
+      },
+      {
+        name: 'Crear tabla pcs_ai_analyses',
+        sql: `CREATE TABLE IF NOT EXISTS pcs_ai_analyses (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  reel_id UUID, idea_id UUID,
+  tipo TEXT CHECK (tipo IN ('diagnostico','hook_analysis','cta_analysis','version_100k','idea_expansion','guion_completo','chat_libre')),
+  pregunta TEXT, respuesta TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+)`
+      },
+      {
+        name: 'Crear tabla pcs_scraping_log',
+        sql: `CREATE TABLE IF NOT EXISTS pcs_scraping_log (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  fecha_scraping TIMESTAMPTZ DEFAULT NOW(),
+  reels_encontrados INTEGER, reels_nuevos INTEGER,
+  reels_actualizados INTEGER, errores TEXT[],
+  status TEXT CHECK (status IN ('success','partial','error'))
+)`
+      },
+      {
+        name: 'RLS: habilitar y crear policies',
+        sql: `DO $$ BEGIN
+  ALTER TABLE pcs_reels ENABLE ROW LEVEL SECURITY;
+  ALTER TABLE pcs_account_snapshots ENABLE ROW LEVEL SECURITY;
+  ALTER TABLE pcs_ideas ENABLE ROW LEVEL SECURITY;
+  ALTER TABLE pcs_guiones ENABLE ROW LEVEL SECURITY;
+  ALTER TABLE pcs_ai_analyses ENABLE ROW LEVEL SECURITY;
+  ALTER TABLE pcs_scraping_log ENABLE ROW LEVEL SECURITY;
+EXCEPTION WHEN OTHERS THEN NULL;
+END $$`
+      },
+      {
+        name: 'Crear policies permisivas',
+        sql: `DO $$ BEGIN
+  CREATE POLICY "pcs_all" ON pcs_reels FOR ALL USING (true) WITH CHECK (true);
+  CREATE POLICY "pcs_all" ON pcs_account_snapshots FOR ALL USING (true) WITH CHECK (true);
+  CREATE POLICY "pcs_all" ON pcs_ideas FOR ALL USING (true) WITH CHECK (true);
+  CREATE POLICY "pcs_all" ON pcs_guiones FOR ALL USING (true) WITH CHECK (true);
+  CREATE POLICY "pcs_all" ON pcs_ai_analyses FOR ALL USING (true) WITH CHECK (true);
+  CREATE POLICY "pcs_all" ON pcs_scraping_log FOR ALL USING (true) WITH CHECK (true);
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$`
+      },
+    ];
+
+    async function execSQL(url, serviceKey, sql) {
+      // Try exec_sql RPC first
+      const res = await fetch(`${url}/rest/v1/rpc/exec_sql`, {
+        method: 'POST',
+        headers: {
+          'apikey': serviceKey,
+          'Authorization': `Bearer ${serviceKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ sql }),
+      });
+      if (res.ok || res.status === 200) {
+        return { ok: true };
+      }
+      // If exec_sql doesn't exist, try the Supabase management API workaround
+      // via the pg endpoint (some projects have it)
+      const res2 = await fetch(`${url}/pg/query`, {
+        method: 'POST',
+        headers: {
+          'apikey': serviceKey,
+          'Authorization': `Bearer ${serviceKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ query: sql }),
+      });
+      if (res2.ok) return { ok: true };
+      return { ok: false, error: await res.text() };
+    }
+
+    async function runMigration() {
+      const url = document.getElementById('sb-url').value;
+      const key = document.getElementById('sb-key').value;
+      const btn = document.getElementById('btn-run');
+      btn.disabled = true;
+      btn.textContent = 'Corriendo...';
+
+      document.getElementById('log').innerHTML = '';
+      log('Iniciando migration...', 'info');
+      setProgress(5);
+
+      // First try to create exec_sql function via supabase client
+      const client = supabase.createClient(url, key);
+
+      // Try each migration step
+      for (let i = 0; i < MIGRATION_STEPS.length; i++) {
+        const step = MIGRATION_STEPS[i];
+        log(`[${i+1}/${MIGRATION_STEPS.length}] ${step.name}...`, 'info');
+        setProgress(10 + (i / MIGRATION_STEPS.length) * 80);
+
+        // Try direct INSERT approach for table creation (won't work but worth a try)
+        const result = await execSQL(url, key, step.sql);
+
+        if (result.ok) {
+          log(`✓ ${step.name}`, 'ok');
+        } else {
+          // Check if table already exists (expected error)
+          if (result.error && result.error.includes('already exists')) {
+            log(`✓ ${step.name} (ya existia)`, 'ok');
+          } else {
+            log(`ℹ ${step.name}: ${result.error?.slice(0, 100) || 'Sin exec_sql disponible'}`, 'err');
+          }
+        }
+      }
+
+      setProgress(100);
+
+      // Verify
+      await checkTables();
+      btn.disabled = false;
+      btn.textContent = 'Correr migration';
+    }
+
+    // Auto-check on load
+    window.onload = async () => {
+      const el = document.getElementById('sb-status');
+      // Quick connectivity check
+      try {
+        const res = await fetch(`${DEFAULT_URL}/rest/v1/pcs_reels?limit=1`, {
+          headers: {
+            'apikey': DEFAULT_SERVICE_KEY,
+            'Authorization': `Bearer ${DEFAULT_SERVICE_KEY}`,
+          }
+        });
+        if (res.status === 200) {
+          el.className = 'status success';
+          el.textContent = '✓ Tablas ya existen! La app esta lista.';
+          document.getElementById('done-card').style.display = 'block';
+        } else if (res.status === 404 || res.status === 400) {
+          el.className = 'status pending';
+          el.textContent = '⚠️ Conexion OK. Las tablas no existen todavia — corré la migration.';
+        } else {
+          el.className = 'status error';
+          el.textContent = 'Error de conexion: ' + res.status;
+        }
+      } catch(e) {
+        el.className = 'status error';
+        el.textContent = 'Sin conexion: ' + e.message;
+      }
+    };
+  </script>
+</body>
+</html>
