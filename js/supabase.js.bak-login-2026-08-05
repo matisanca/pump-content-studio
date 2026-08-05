@@ -5,40 +5,15 @@
 const DB = (() => {
   // Config — change these or use env vars via Netlify
   const SUPABASE_URL = 'https://pqozzhnnfstplqrrpqwi.supabase.co';
-  // Clave publica (anon). Es SEGURO que este aca: desde el 2026-08-05 todas las
-  // tablas tienen RLS y `anon` no tiene ninguna politica, asi que sola no lee ni
-  // escribe nada. El acceso real lo da el login (rol `authenticated`).
-  // Antes se leia de localStorage y se entraba como anon: con RLS eso devuelve
-  // 0 filas y la app quedaba vacia sin tirar un solo error.
-  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBxb3p6aG5uZnN0cGxxcnJwcXdpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0NjI1OTQsImV4cCI6MjA5MDAzODU5NH0.PXmizmZROCrdMxi0cXNM2YhHxsvl3Juj6JjD9bmS3Ls';
+  const SUPABASE_ANON_KEY = localStorage.getItem('pcs_supabase_key') || '';
 
   let client = null;
 
   function init() {
-    client = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-      auth: { persistSession: true, autoRefreshToken: true }
-    });
-    // limpieza: la clave que se pegaba a mano ya no se usa
-    try { localStorage.removeItem('pcs_supabase_key'); } catch (e) {}
+    const key = SUPABASE_ANON_KEY || localStorage.getItem('pcs_supabase_key');
+    if (!key) return false;
+    client = supabase.createClient(SUPABASE_URL, key);
     return true;
-  }
-
-  async function hasSession() {
-    if (!client) return false;
-    try {
-      const { data } = await client.auth.getSession();
-      return !!(data && data.session);
-    } catch (e) { return false; }
-  }
-
-  async function signIn(email, password) {
-    if (!client) init();
-    const { error } = await client.auth.signInWithPassword({ email, password });
-    return error ? error.message : null;
-  }
-
-  async function signOut() {
-    if (client) await client.auth.signOut();
   }
 
   function setKey(key) {
@@ -353,7 +328,6 @@ const DB = (() => {
   }
 
   return {
-    hasSession, signIn, signOut,
     init, setKey, isConnected,
     getReels, getReel, upsertReel, upsertReelByUrl, deleteReel, getAllReels, getReelStats,
     getBenchmarks,

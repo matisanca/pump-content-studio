@@ -6,11 +6,9 @@ window.PCS = (() => {
   let currentPage = 'dashboard';
 
   async function init() {
-    DB.init();
-    // Puerta de login: sin sesion, `anon` no ve nada (RLS). Los permisos los
-    // da el rol `authenticated`, que tiene politicas en las 31 tablas.
-    if (!(await DB.hasSession())) {
-      mostrarLogin();
+    // Check Supabase connection
+    if (!DB.init()) {
+      navigate('config');
       return;
     }
 
@@ -25,45 +23,6 @@ window.PCS = (() => {
     } else {
       navigate('dashboard');
     }
-  }
-
-
-  function mostrarLogin() {
-    const c = document.getElementById('content') || document.body;
-    c.innerHTML = [
-      '<div style="max-width:340px;margin:14vh auto;padding:26px;',
-      'background:#0e0e14;border:1px solid #1f1f2e;border-radius:12px;',
-      'font-family:system-ui,sans-serif;color:#f0f0f8">',
-      '<h2 style="margin:0 0 4px;font-size:17px">PUMP CONTENT STUDIO</h2>',
-      '<p style="margin:0 0 18px;color:#8a8a9e;font-size:12px">Iniciar sesion</p>',
-      '<input id="pcs-mail" type="email" placeholder="email" ',
-      'style="width:100%;padding:9px 11px;margin-bottom:9px;background:#060608;',
-      'border:1px solid #1f1f2e;border-radius:6px;color:#f0f0f8;font-size:13px;',
-      'box-sizing:border-box">',
-      '<input id="pcs-pass" type="password" placeholder="contrasena" ',
-      'style="width:100%;padding:9px 11px;margin-bottom:14px;background:#060608;',
-      'border:1px solid #1f1f2e;border-radius:6px;color:#f0f0f8;font-size:13px;',
-      'box-sizing:border-box">',
-      '<button id="pcs-go" style="width:100%;padding:10px;background:#ff6b35;',
-      'border:0;border-radius:6px;color:#fff;font-weight:600;cursor:pointer">',
-      'Entrar</button>',
-      '<p id="pcs-err" style="margin:12px 0 0;color:#ff5c5c;font-size:12px"></p>',
-      '</div>'
-    ].join('');
-
-    const entrar = async () => {
-      const err = document.getElementById('pcs-err');
-      err.textContent = 'Entrando...';
-      const msg = await DB.signIn(
-        document.getElementById('pcs-mail').value.trim(),
-        document.getElementById('pcs-pass').value);
-      if (msg) { err.textContent = msg; return; }
-      location.reload();
-    };
-    document.getElementById('pcs-go').onclick = entrar;
-    document.getElementById('pcs-pass').addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') entrar();
-    });
   }
 
   async function navigate(page, param) {
